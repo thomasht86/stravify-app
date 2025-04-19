@@ -209,32 +209,10 @@
             gap: 1rem;
             margin-top: 1.5rem;
         }
-        .share-buttons {
-            display: flex;
-            gap: 1.5rem;
-        }
-        .share-buttons button {
-            padding: 0.75rem; /* Make circular buttons */
-            border-radius: 50%;
-            line-height: 0; /* Center icon */
-            width: 44px; /* Explicit size */
-            height: 44px;
-            border: none;
-            box-shadow: var(--pico-card-box-shadow);
-        }
-        #shareXBtn {
-            background-color: var(--x-blue);
-            color: white;
-        }
-         #shareXBtn:hover {
-             background-color: #198cd6; /* Darker X blue */
-         }
-        #shareInstaBtn {
-             background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-             color: white;
-        }
-        #shareInstaBtn:hover {
-             filter: brightness(1.1);
+        #stravaPoweredLogo {
+            height: 28px; /* Adjust height as needed */
+            width: auto; /* Maintain aspect ratio */
+            vertical-align: middle; /* Align with buttons if needed */
         }
         /* Hide default file input */
         input[type="file"].hidden {
@@ -307,14 +285,8 @@
                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></svg>
                  Download Image
             </button>
-            <div class="share-buttons">
-                <button id="shareXBtn" aria-label="Share to X">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M12.6.75h2.454l-5.36 6.142L16 15.25h-4.937l-3.867-5.07-4.425 5.07H.316l5.733-6.57L0 .75h5.063l3.495 4.633L12.601.75Zm-.86 13.028h1.36L4.323 2.145H2.865z"/></svg>
-                 </button>
-                <button id="shareInstaBtn" aria-label="Share to Instagram">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-                 </button>
-            </div>
+            <!-- Added Powered by Strava Logo -->
+            <img src="assets/api_logo_pwrdBy_strava_horiz_orange.svg" alt="Powered by Strava" id="stravaPoweredLogo">
         </div>
     </main>
 
@@ -335,8 +307,6 @@
         const activitiesSelect = document.getElementById('activities');
         const stravaBtn = document.getElementById('stravaBtn');
         const stravaStatusIndicator = document.getElementById('stravaStatusIndicator'); // Get the indicator
-        const shareXBtn = document.getElementById('shareXBtn');
-        const shareInstaBtn = document.getElementById('shareInstaBtn');
 
         // Overlay Content Elements
         const ovTitle = document.getElementById('activityTitle');
@@ -543,8 +513,6 @@
             reader.readAsDataURL(file);
         }
 
-        // REMOVED loadDefaultImage function
-
         function enableDownload() { downloadBtn.disabled = false; }
         function disableDownload() { downloadBtn.disabled = true; }
 
@@ -632,24 +600,23 @@
         wrapper.addEventListener('pointerup', pointerUp);
 
 
-        // --- Capture & Share ---
-        function setLoadingState(isLoading, button = downloadBtn) {
-            const relatedButton = button === shareXBtn ? shareXBtn : (button === shareInstaBtn ? shareInstaBtn : downloadBtn);
+        // --- Capture & Download ---
+        function setLoadingState(isLoading, button) {
             if (isLoading) {
-                relatedButton.ariaBusy = "true";
-                relatedButton.disabled = true; // Disable while loading
+                button.ariaBusy = "true";
+                button.disabled = true; // Disable while loading
             } else {
-                relatedButton.ariaBusy = "false";
-                 // Re-enable only if an image is loaded (for download/share buttons)
-                 if (relatedButton !== stravaBtn) {
-                     if (img.src && img.src !== window.location.href) { // Check if src is set and not just the base URL
-                         relatedButton.disabled = false;
+                button.ariaBusy = "false";
+                 if (button === downloadBtn) {
+                     if (img.src && img.src !== window.location.href) { 
+                         button.disabled = false;
                      } else {
-                         relatedButton.disabled = true; // Keep disabled if no image
+                         button.disabled = true; 
                      }
+                 } else if (button === stravaBtn) {
+                     button.disabled = !!authData; 
                  } else {
-                     // Re-enable Strava button based on auth state (handled elsewhere)
-                     relatedButton.disabled = !!authData; // Disable if connected
+                     button.disabled = false;
                  }
             }
         }
@@ -657,23 +624,21 @@
         const capture = () => {
             setLoadingState(true, downloadBtn);
             console.log("Starting canvas capture...");
-            // Temporarily remove border-radius and shadow for clean capture
             const prevRadius = wrapper.style.borderRadius;
             wrapper.style.borderRadius = '0';
-            // Ensure overlay is visible for capture if it wasn't
             const overlayWasVisible = overlay.style.visibility !== 'hidden';
             overlay.style.visibility = 'visible';
 
             return html2canvas(wrapper, {
-                useCORS: true, // Important for external images (default, user uploads)
-                allowTaint: true, // May help with CORS issues but can taint canvas
-                backgroundColor: null, // Preserve transparency if needed
-                scale: 1, // Increase scale for higher resolution (e.g., 2x)
-                logging: false // Disable html2canvas logging unless debugging
+                useCORS: true, 
+                allowTaint: true, 
+                backgroundColor: null, 
+                scale: 1, 
+                logging: false 
             })
             .then(canvas => {
                 console.log("Canvas generated");
-                 return new Promise((resolve, reject) => { // Added reject
+                 return new Promise((resolve, reject) => { 
                      canvas.toBlob((blob) => {
                          if (blob) {
                              console.log("Blob created, size:", blob.size);
@@ -688,13 +653,12 @@
             .catch(error => {
                 console.error("html2canvas error:", error);
                 alert(`Failed to capture image. Error: ${error.message}`);
-                return Promise.reject(error); // Propagate the error
+                return Promise.reject(error); 
             })
             .finally(() => {
-                // Restore styles after capture
                 wrapper.style.borderRadius = prevRadius;
                 if (!overlayWasVisible) {
-                    overlay.style.visibility = 'hidden'; // Hide overlay again if it was initially hidden
+                    overlay.style.visibility = 'hidden'; 
                 }
                 setLoadingState(false, downloadBtn);
                  console.log("Capture process finished.");
@@ -702,99 +666,39 @@
         };
 
         downloadBtn.addEventListener('click', () => {
-            capture().then(({ canvas, blob }) => { // Using blob is often more reliable
-                const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15); // YYYYMMDDTHHMMSS
+            capture().then(({ canvas, blob }) => { 
+                const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15); 
                 const filename = `stravify_${timestamp}.png`;
                 const link = document.createElement('a');
                 link.download = filename;
                 link.href = URL.createObjectURL(blob);
                 link.click();
-                URL.revokeObjectURL(link.href); // Clean up blob URL
-            }).catch(err => { /* Error handled in capture() */ });
+                URL.revokeObjectURL(link.href); 
+            }).catch(err => { });
         });
 
-        // Generic share function
-        async function shareImage(platform) {
-            const buttonToLoad = platform === 'X' ? shareXBtn : shareInstaBtn;
-            setLoadingState(true, buttonToLoad);
-            try {
-                const { blob } = await capture();
-                const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15);
-                const filename = `stravify_${timestamp}.png`;
-                const file = new File([blob], filename, { type: 'image/png' });
-                const shareData = {
-                    files: [file],
-                    title: 'My Strava Activity',
-                    text: `Check out my activity! #Stravify`,
-                };
-
-                if (navigator.canShare && navigator.canShare(shareData)) {
-                     await navigator.share(shareData);
-                     console.log("Shared successfully via Web Share API");
-                } else {
-                    // Fallback for specific platforms or if Web Share isn't supported/doesn't handle files
-                    console.log("Web Share API not available or cannot share file, attempting fallback...");
-                    if (platform === 'X') {
-                        // X/Twitter Web Intent: Doesn't directly support image uploads via URL easily.
-                        // Best fallback is to prompt download and tell user to upload manually.
-                        alert('Sharing directly to X with the image is not supported by browsers. Please download the image and upload it manually.');
-                        downloadBtn.click(); // Trigger download as fallback
-                        // Or open tweet intent with text only:
-                        // window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareData.text + ' ✨'), '_blank');
-                    } else if (platform === 'Instagram') {
-                         // Instagram doesn't have a web intent for sharing posts with images.
-                         alert('Sharing directly to Instagram posts from the web is not possible. Please download the image and share it via the app.');
-                         downloadBtn.click(); // Trigger download as fallback
-                    } else {
-                         // Generic fallback
-                         alert('Sharing not supported on this browser/device. Please download the image.');
-                         downloadBtn.click();
-                    }
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') { // Don't alert if user cancelled share sheet
-                   console.error(`Error sharing to ${platform}:`, err);
-                   alert(`Could not share the image. Error: ${err.message}`);
-                } else {
-                    console.log("Share action aborted by user.");
-                }
-            } finally {
-                 setLoadingState(false, buttonToLoad);
-            }
-        }
-
-        shareXBtn.addEventListener('click', () => shareImage('X'));
-        shareInstaBtn.addEventListener('click', () => shareImage('Instagram'));
-
-
-        // --- Initialization ---
         function init() {
             console.log("Initializing Stravify...");
-            loadAuthData(); // Check auth status on load (this calls updateStravaButtonState which handles initial overlay/select)
+            loadAuthData(); 
 
-            // Load placeholder image
             img.onload = () => {
                 console.log("Placeholder image loaded.");
                 resetOverlayPosition();
-                overlay.style.visibility = 'visible'; // Show overlay
-                disableDownload(); // Keep download disabled for placeholder
+                overlay.style.visibility = 'visible'; 
+                disableDownload(); 
             };
             img.onerror = () => {
                 console.error("Error loading placeholder image.");
                 img.alt = 'Placeholder image failed to load.';
-                overlay.style.visibility = 'visible'; // Still show overlay
+                overlay.style.visibility = 'visible'; 
                 disableDownload();
             };
-            img.src = 'https://picsum.photos/id/17/1600/1200'; // Set placeholder image source
-            img.alt = 'Placeholder image - a landscape'; // Update alt text
-
-            // Initial population is handled within loadAuthData -> updateStravaButtonState
-            // No need to call populateActivitiesSelect or updateOverlay here again unless loadAuthData fails early
+            img.src = 'https://picsum.photos/id/17/1600/1200'; 
+            img.alt = 'Placeholder image - a landscape'; 
 
             console.log("Initialization complete.");
         }
 
-        // --- Run ---
         init();
 
     })();
