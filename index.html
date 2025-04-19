@@ -53,34 +53,35 @@
         }
         .button-group {
             display: flex;
+            flex-direction: column; /* Stack button and indicator */
+            align-items: center; /* Center items horizontally */
             flex-wrap: wrap; /* Allow wrapping on smaller screens */
-            gap: 1rem;
+            gap: 0.5rem; /* Reduced gap for indicator */
             justify-content: center; /* Center remaining button */
             margin-bottom: 1.5rem;
         }
         .button-group label, .button-group a, .button-group button {
             margin-bottom: 0; /* Override Pico's default margin */
         }
-        /* Custom Strava button */
-        #stravaBtn {
-            --pico-color: white;
-            --pico-background-color: var(--strava-orange);
-            --pico-border-color: var(--strava-orange);
-            --pico-hover-background-color: #e14502; /* Darker orange on hover */
-            --pico-hover-border-color: #e14502;
-            display: inline-flex; /* Align icon and text */
-            align-items: center;
-            gap: 0.5rem;
-        }
+        /* Keep .connected styles for now, may need adjustment */
         #stravaBtn.connected {
-             --pico-background-color: #16a34a; /* Green */
-             --pico-border-color: #16a34a;
-             --pico-hover-background-color: #15803d;
-             --pico-hover-border-color: #15803d;
+             opacity: 0.8;
              cursor: default;
         }
-         /* Style file input trigger */
-        /* REMOVED #uploadLabel styles */
+
+        /* New Strava Status Indicator Styles */
+        .strava-status {
+            display: none; /* Hidden by default */
+            font-size: 0.8rem;
+            color: #6b7280; /* Muted grey */
+            margin-top: -0.25rem; /* Adjust spacing slightly */
+            transition: color 0.3s ease;
+        }
+        .strava-status.connected {
+            display: inline; /* Show when connected */
+            color: #22c55e; /* Green color for connected */
+            font-weight: 500;
+        }
 
         main {
             flex: 1; /* Ensure main content pushes footer down */
@@ -261,9 +262,10 @@
         <p>your photo</p>
         <div class="button-group">
             <!-- Removed Upload Label -->
-            <a id="stravaBtn" role="button" href="https://www.strava.com/oauth/authorize?client_id=76899&response_type=code&redirect_uri=https://thomasht86--stravify-oauth-fastapi-app.modal.run/login&approval_prompt=auto&scope=activity:read">
-                <span id="stravaBtnText">Connect to Strava</span>
+            <a id="stravaBtn" role="button" href="https://www.strava.com/oauth/authorize?client_id=76899&response_type=code&redirect_uri=https://thomasht86--stravify-oauth-fastapi-app.modal.run/login&approval_prompt=auto&scope=activity:read" style="background: none; border: none; padding: 0; display: inline-block; vertical-align: middle;">
+                <img src="assets/btn_strava_connect_with_orange.svg" alt="Connect with Strava" style="display: block; height: 48px; width: auto;">
             </a>
+            <span id="stravaStatusIndicator" class="strava-status"></span> <!-- New Indicator -->
         </div>
     </header>
 
@@ -332,7 +334,7 @@
         const activityPicker = document.getElementById('activityPicker');
         const activitiesSelect = document.getElementById('activities');
         const stravaBtn = document.getElementById('stravaBtn');
-        const stravaBtnText = document.getElementById('stravaBtnText');
+        const stravaStatusIndicator = document.getElementById('stravaStatusIndicator'); // Get the indicator
         const shareXBtn = document.getElementById('shareXBtn');
         const shareInstaBtn = document.getElementById('shareInstaBtn');
 
@@ -383,18 +385,22 @@
             if (authData) {
                 stravaBtn.href = '#'; // Prevent navigation
                 stravaBtn.classList.add('connected');
-                stravaBtnText.textContent = 'Connected to Strava ✅';
                 stravaBtn.onclick = (e) => e.preventDefault(); // Disable click action
+
+                stravaStatusIndicator.textContent = 'Connected ✅'; // Set text
+                stravaStatusIndicator.classList.add('connected'); // Add class to show and style
+
                 fetchActivities();
             } else {
-                 // Ensure button is in default state (handled by initial HTML/CSS)
-                 // Make sure the click handler isn't prevented if user logs out/token expires
                  stravaBtn.onclick = null;
-                 stravaBtn.classList.remove('connected'); // Ensure disconnected style
-                 stravaBtnText.textContent = 'Connect to Strava'; // Reset text
+                 stravaBtn.classList.remove('connected');
                  stravaBtn.href = `https://www.strava.com/oauth/authorize?client_id=76899&response_type=code&redirect_uri=https://thomasht86--stravify-oauth-fastapi-app.modal.run/login&approval_prompt=auto&scope=activity:read`; // Reset href
-                 populateActivitiesSelect([]); // Clear activities dropdown and show mock/connect prompt
-                 updateOverlay(mockActivity); // Show mock data when not connected
+
+                 stravaStatusIndicator.textContent = ''; // Clear text
+                 stravaStatusIndicator.classList.remove('connected'); // Remove class to hide
+
+                 populateActivitiesSelect([]);
+                 updateOverlay(mockActivity);
             }
         }
 
