@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Encoded Polyline Viewer (Equirectangular)</title>
+  <style>
+    body{font-family:Arial, sans-serif; margin:20px; text-align:center;}
+    #canvas{border:1px solid #ccc;}
+    textarea{width:100%; height:120px; font-family:monospace;}
+    button{padding:10px 20px; margin-top:10px; font-size:16px; cursor:pointer;}
+    label{font-weight:bold;}
+  </style>
+</head>
+<body>
+  <h2>Encoded Polyline → Equirectangular Square</h2>
+  <p>Paste an encoded polyline string below (it can include newlines, JSON escapes, etc.).<br>
+     <small>Separate multiple polylines with a blank line or a semicolon “;”.</small></p>
+  <label for="polyline">Polyline input</label><br>
+  <textarea id="polyline" spellcheck="false" wrap="off" placeholder="_p~iF~ps|U_ulLnnqC …"></textarea><br/>
+  <button id="drawBtn">Draw</button>
+  <br><br>
+  <canvas id="canvas" width="500" height="500"></canvas>
+  <script>
+    /* =============================================================
+       0 · Helpers: JSON‑style unescape without eval
+    ============================================================= */
+    function unescapeJSON(raw){
+      // Try JSON.parse trick to handle \" \u2022 etc.
+      try{
+        return JSON.parse('"'+ raw.replace(/"/g,'\\"') +'"');
+      }catch(e){
+        return raw; // if it fails, keep original
+      }
+    }
+
+    /* =============================================================
+       1 · Parse user input  ⟶  array of raw encoded strings
+    ============================================================= */
+    function parseInput(text){
+      // Normalise line endings
+      text = text.replace(/\r\n?/g,'\n');
+      // If user explicitly uses semicolon, split there
+      if(text.includes(';')){
+        return text.split(';').map(s=>s.trim()).filter(Boolean);
+      }
+      // If there is a blank line (double newline) -> treat each block as separate polyline
+      if(/\n\s*\n/.test(text)){
+        return text.split(/\n\s*\n/).map(s=>s.replace(/\s+/g,'').trim()).filter(Boolean);
+      }
+      // Otherwise treat everything as ONE polyline: just remove whitespace
+      return [text.replace(/\s+/g,'')];
+    }
+
+    /* =============================================================
+       2 · Polyline decoder (Google algorithm)
+    ============================================================= */
+    function decodePolyline(str){
+      let index = 0, lat = 0, lng = 0, points = [];
+      const len = str.length;
+      while(index < len){
+        let b, shift = 0, result = 0;
+        // latitude
+        do{
+          b = str.charCodeAt(index++) - 63;
+          if(b < 0) return []; // invalid char – give up on this string
+          result |= (b & 0x1f) << shift;
+          shift += 5;
+        }while(b >= 0x20 && index < len);
+        lat += ((result & 1) ? ~(result >> 1) : (result >> 1));
+        // longitude
+        shift = 0; result = 0;
+        do{
+          b = str.charCodeAt(index++) - 63;
+          if(b < 0) return [];
+          result |= (b & 0x1f) << shift;
+          shift += 5;
+        }while(b >= 0x20 && index < len);
+        lng += ((result & 1) ? ~(result >> 1) : (result >> 1));
+        points.push([lat * 1e-5, lng * 1e-5]);
+      }
+      return points;
+    }
+
+    /* =============================================================
+       3 · Projection helpers
+    ============================================================= */
+    function centroid(all){
+      let sLat=0, sLon=0, n=0;
+      all.forEach(pts=>pts.forEach(p=>{sLat+=p[0]; sLon+=p[1]; n++;}));
+      return {lat:sLat/n, lon:sLon/n};
+    }
+    function project(arr, c){
+      const cos0 = Math.cos(c.lat*Math.PI/180);
+      return arr.map(p=>{
+        let dLon = p[1]-c.lon; if(dLon>180) dLon-=360; if(dLon<-180) dLon+=360;
+        return [dLon*cos0, p[0]-c.lat];
+      });
+    }
+    function fit(arrays, size){
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      arrays.forEach(a=>a.forEach(([x,y])=>{if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}));
+      const scale = (size*0.9)/Math.max(maxX-minX,maxY-minY||1e-9);
+      return arrays.map(a=>a.map(([x,y])=>[(x-(minX+maxX)/2)*scale+size/2,((y-(minY+maxY)/2)*-scale)+size/2]));
+    }
+
+    /* =============================================================
+       4 · Canvas renderer (one path per polyline, break on jumps)
+    ============================================================= */
+    function draw(ctx, polys, size){
+      ctx.clearRect(0,0,size,size);
+      ctx.lineWidth=2; ctx.strokeStyle='#0074D9'; const breakDist=size*0.45;
+      polys.forEach(arr=>{
+        ctx.beginPath(); let prev=null;
+        arr.forEach(([x,y])=>{
+          if(!prev){ctx.moveTo(x,y); prev=[x,y]; return;}
+          const d=Math.hypot(x-prev[0],y-prev[1]);
+          if(d>breakDist) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+          prev=[x,y];
+        });
+        ctx.stroke();
+      });
+      ctx.fillStyle='red'; ctx.beginPath(); ctx.arc(size/2,size/2,4,0,Math.PI*2); ctx.fill();
+    }
+
+    /* =============================================================
+       5 · UI bridge
+    ============================================================= */
+    const SIZE=500; const ctx=document.getElementById('canvas').getContext('2d');
+    document.getElementById('drawBtn').addEventListener('click',()=>{
+      const raw=document.getElementById('polyline').value;
+      if(!raw.trim()){alert('Please paste an encoded polyline'); return;}
+
+      // Step 1: break into candidate strings
+      const blocks=parseInput(raw);
+      // Step 2: JSON‑style unescape each (handles double‑backslashes, \uXXXX, etc.)
+      const clean=blocks.map(unescapeJSON);
+      // Step 3: decode – if a block fails, skip it
+      const decoded=clean.map(decodePolyline).filter(p=>p.length);
+      if(!decoded.length){alert('None of the strings looked like a valid polyline.'); return;}
+      // Step 4: projection + drawing
+      const cen=centroid(decoded);
+      const proj=decoded.map(p=>project(p,cen));
+      const pixel=fit(proj,SIZE);
+      draw(ctx,pixel,SIZE);
+    });
+
+    // preload demo example
+    document.getElementById('polyline').value =
+      `_p~iF~ps|U_ulLnnqC\n_mqNvxq@`;
+  </script>
+</body>
+</html>
