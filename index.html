@@ -169,12 +169,14 @@
             font-size: 0.9rem; /* Smaller title */
             font-weight: 600;
             margin-bottom: 0; /* Remove default margin */
-            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-align: center;
-            border-bottom: none; /* Override Pico */
-            padding-bottom: 0; /* Override Pico */
+            text-align: center; /* Center align */
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* Limit to 2 lines */
+            line-clamp: 2; /* Standard property */
+            -webkit-box-orient: vertical;
+            line-height: 1.2; /* Adjust line height for multi-line */
         }
         /* New container for icon and grid */
         .stats-row {
