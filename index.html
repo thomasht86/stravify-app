@@ -289,7 +289,7 @@
                     <div class="stats-grid">
                         <!-- Row 1 -->
                         <div><span id="distance">--</span><span>km</span></div>
-                        <div><span id="duration">--</span><span>hrs</span></div>
+                        <div><span id="duration">--</span><span>HRS</span></div>
                         <div><span id="elev">--</span><span>m&nbsp;↑</span></div>
                         <!-- Row 2: New Stats -->
                         <div id="avgHrDiv" style="display: none;"><span id="avgHr">--</span><span>bpm</span></div>
@@ -491,9 +491,9 @@
             const s = Math.round(seconds);
             const h = Math.floor(s / 3600);
             const m = Math.floor((s % 3600) / 60);
-            return h > 0
-                ? `${h}:${String(m).padStart(2, '0')}`
-                : String(m);
+            const sec = s % 60; // Calculate seconds
+            // Format as H:MM:SS
+            return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
         }
 
         function getActivityIcon(type) {
@@ -550,7 +550,6 @@
             } else {
                 avgHrDiv.style.display = 'none';
             }
-
             if (dataToShow?.average_speed) {
                 const { value, unit } = formatSpeed(dataToShow.average_speed, dataToShow.type);
                 ovAvgSpeed.textContent = value;
@@ -559,7 +558,6 @@
             } else {
                 avgSpeedDiv.style.display = 'none';
             }
-
             if (dataToShow?.suffer_score) {
                 ovSufferScore.textContent = dataToShow.suffer_score;
                 sufferScoreDiv.style.display = 'block';
@@ -619,21 +617,18 @@
 
         function pointerDown(ev) {
             if (!overlay.contains(ev.target) || overlay.style.visibility === 'hidden') return;
-
             ev.preventDefault();
             const currentTop = overlay.offsetTop;
             const currentLeft = overlay.offsetLeft;
-
             drag = {
                 startX: ev.clientX,
                 startY: ev.clientY,
                 origX: currentLeft,
-                origY: currentTop
+                origY: currentTop,
             };
             overlay.style.bottom = 'auto';
             overlay.style.top = `${drag.origY}px`;
             overlay.style.left = `${drag.origX}px`;
-
             overlay.setPointerCapture(ev.pointerId);
             overlay.style.cursor = 'grabbing';
         }
@@ -645,12 +640,10 @@
             const dy = ev.clientY - drag.startY;
             let newX = drag.origX + dx;
             let newY = drag.origY + dy;
-
             const maxX = wrapper.clientWidth - overlay.offsetWidth;
             const maxY = wrapper.clientHeight - overlay.offsetHeight;
             newX = Math.max(0, Math.min(maxX, newX));
             newY = Math.max(0, Math.min(maxY, newY));
-
             overlay.style.left = `${newX}px`;
             overlay.style.top = `${newY}px`;
         }
@@ -692,7 +685,6 @@
             wrapper.style.borderRadius = '0';
             const overlayWasVisible = overlay.style.visibility !== 'hidden';
             overlay.style.visibility = 'visible';
-
             return html2canvas(wrapper, {
                 useCORS: true, 
                 allowTaint: true, 
@@ -713,7 +705,7 @@
             })
             .catch(error => {
                 alert(`Failed to capture image. Error: ${error.message}`);
-                return Promise.reject(error); 
+                return Promise.reject(error);
             })
             .finally(() => {
                 wrapper.style.borderRadius = prevRadius;
@@ -725,7 +717,7 @@
         };
 
         downloadBtn.addEventListener('click', () => {
-            capture().then(({ canvas, blob }) => { 
+            capture().then(({ canvas, blob }) => {
                 const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15); 
                 const filename = `stravify_${timestamp}.png`;
                 const link = document.createElement('a');
@@ -738,11 +730,10 @@
 
         function init() {
             loadAuthData();
-
             img.onload = () => {
                 resetOverlayPosition();
                 overlay.style.visibility = 'visible'; 
-                disableDownload(); 
+                disableDownload();
                 updateOverlay(authData ? null : selectedMockActivity);
             };
             img.onerror = () => {
@@ -754,9 +745,7 @@
             img.src = 'https://picsum.photos/id/17/1600/1200';
             img.alt = 'Placeholder image - a landscape';
         }
-
         init();
-
     })();
     </script>
 </body>
