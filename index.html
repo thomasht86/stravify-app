@@ -11,7 +11,6 @@
     <style>
         :root {
             --strava-orange: #FC4C02;
-            --x-blue: #1d9bf0;
             --pico-font-family: 'Inter', sans-serif; /* Optional: Use Inter font like o3.html */
             --pico-color: #e2e8f0; /* Lighter text color */
             --pico-card-background-color: #1f2937; /* Darker card */
@@ -193,6 +192,7 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto auto; /* Add this for two rows */
             gap: 0.5rem;
             text-align: center;
             flex-grow: 1; /* Allow grid to take remaining space */
@@ -287,9 +287,14 @@
                 <div class="stats-row">
                     <span id="activityIcon" class="material-symbols-outlined"></span>
                     <div class="stats-grid">
+                        <!-- Row 1 -->
                         <div><span id="distance">--</span><span>km</span></div>
                         <div><span id="duration">--</span><span>hrs</span></div>
                         <div><span id="elev">--</span><span>m&nbsp;↑</span></div>
+                        <!-- Row 2: New Stats -->
+                        <div id="avgHrDiv" style="display: none;"><span id="avgHr">--</span><span>bpm</span></div>
+                        <div id="avgSpeedDiv" style="display: none;"><span id="avgSpeed">--</span><span id="avgSpeedUnit">km/h</span></div>
+                        <div id="sufferScoreDiv" style="display: none;"><span id="sufferScore">--</span><span>suffer</span></div>
                     </div>
                 </div>
             </div>
@@ -326,16 +331,25 @@
         const ovDistance = document.getElementById('distance');
         const ovDuration = document.getElementById('duration');
         const ovElev = document.getElementById('elev');
+        // New stat element references
+        const avgHrDiv = document.getElementById('avgHrDiv');
+        const ovAvgHr = document.getElementById('avgHr');
+        const avgSpeedDiv = document.getElementById('avgSpeedDiv');
+        const ovAvgSpeed = document.getElementById('avgSpeed');
+        const ovAvgSpeedUnit = document.getElementById('avgSpeedUnit');
+        const sufferScoreDiv = document.getElementById('sufferScoreDiv');
+        const ovSufferScore = document.getElementById('sufferScore');
 
         let authData = null;
         let drag = null;
         let currentActivities = [];
+        // Updated mock data
         const mockActivities = [
-            { id: 'mock-run', name: 'Morning Run', type: 'Run', distance: 5123.4, moving_time: 1800, total_elevation_gain: 55.6, start_date_local: new Date(Date.now() - 86400000).toISOString() },
-            { id: 'mock-ride', name: 'Weekend Ride', type: 'Ride', distance: 25450.1, moving_time: 5400, total_elevation_gain: 210.3, start_date_local: new Date(Date.now() - 2*86400000).toISOString() },
-            { id: 'mock-walk', name: 'Evening Walk', type: 'Walk', distance: 3050.0, moving_time: 2700, total_elevation_gain: 15.0, start_date_local: new Date(Date.now() - 3*86400000).toISOString() },
-            { id: 'mock-hike', name: 'Mountain Hike', type: 'Hike', distance: 12800.5, moving_time: 10800, total_elevation_gain: 650.8, start_date_local: new Date(Date.now() - 4*86400000).toISOString() },
-            { id: 'mock-other', name: 'Gym Session', type: 'Workout', distance: 0, moving_time: 3600, total_elevation_gain: 0, start_date_local: new Date(Date.now() - 5*86400000).toISOString() }
+            { id: 'mock-run', name: 'Morning Run', type: 'Run', distance: 5123.4, moving_time: 1800, total_elevation_gain: 55.6, start_date_local: new Date(Date.now() - 86400000).toISOString(), average_heartrate: 155.2, average_speed: 2.846, suffer_score: 45 },
+            { id: 'mock-ride', name: 'Weekend Ride', type: 'Ride', distance: 25450.1, moving_time: 5400, total_elevation_gain: 210.3, start_date_local: new Date(Date.now() - 2*86400000).toISOString(), average_heartrate: 138.9, average_speed: 4.713, suffer_score: 60 },
+            { id: 'mock-walk', name: 'Evening Walk', type: 'Walk', distance: 3050.0, moving_time: 2700, total_elevation_gain: 15.0, start_date_local: new Date(Date.now() - 3*86400000).toISOString(), average_heartrate: 95.5, average_speed: 1.13 },
+            { id: 'mock-hike', name: 'Mountain Hike', type: 'Hike', distance: 12800.5, moving_time: 10800, total_elevation_gain: 650.8, start_date_local: new Date(Date.now() - 4*86400000).toISOString(), average_speed: 1.185, suffer_score: 80 },
+            { id: 'mock-other', name: 'Gym Session', type: 'Workout', distance: 0, moving_time: 3600, total_elevation_gain: 0, start_date_local: new Date(Date.now() - 5*86400000).toISOString(), average_heartrate: 110.0 }
         ];
         let selectedMockActivity = mockActivities[0];
 
@@ -496,17 +510,62 @@
             }
         }
 
+        function formatSpeed(speedMps, activityType) {
+            if (isNaN(speedMps) || speedMps <= 0) return { value: '--', unit: '' };
+
+            const typeLower = activityType?.toLowerCase() || '';
+
+            if (typeLower === 'run' || typeLower === 'walk' || typeLower === 'hike') {
+                const paceDecimal = 1000 / (speedMps * 60); // minutes per km
+                if (!isFinite(paceDecimal)) return { value: '--', unit: 'min/km' };
+                const minutes = Math.floor(paceDecimal);
+                const seconds = Math.round((paceDecimal - minutes) * 60);
+                return { value: `${minutes}:${String(seconds).padStart(2, '0')}`, unit: 'min/km' };
+            } else if (typeLower === 'ride' || typeLower === 'ebikeride' || typeLower === 'handcycle' || typeLower === 'velomobile') {
+                const speedKph = speedMps * 3.6;
+                return { value: speedKph.toFixed(1), unit: 'km/h' };
+            } else {
+                const speedKph = speedMps * 3.6;
+                return { value: speedKph.toFixed(1), unit: 'km/h' };
+            }
+        }
+
         function updateOverlay(activity = null) {
             const dataToShow = activity || (!authData ? selectedMockActivity : null);
+            console.log("Updating overlay with data:", dataToShow);
 
+            // --- Row 1 ---
             ovTitle.textContent = dataToShow?.name || 'Activity Title';
-            ovDistance.textContent = dataToShow ? (dataToShow.distance / 1000).toFixed(1) : '--';
-            ovDuration.textContent = dataToShow ? secondsToHms(dataToShow.moving_time) : '--';
-            ovElev.textContent = dataToShow ? Math.round(dataToShow.total_elevation_gain) : '--';
-
+            ovDistance.textContent = dataToShow?.distance ? (dataToShow.distance / 1000).toFixed(1) : '--';
+            ovDuration.textContent = dataToShow?.moving_time ? secondsToHms(dataToShow.moving_time) : '--';
+            ovElev.textContent = dataToShow?.total_elevation_gain ? Math.round(dataToShow.total_elevation_gain) : '--';
             const iconName = dataToShow ? getActivityIcon(dataToShow.type) : '';
-            ovIcon.textContent = iconName; // Set the icon name text
+            ovIcon.textContent = iconName;
             ovIcon.style.display = iconName ? 'inline-block' : 'none';
+
+            // --- Row 2 ---
+            if (dataToShow?.average_heartrate) {
+                ovAvgHr.textContent = Math.round(dataToShow.average_heartrate);
+                avgHrDiv.style.display = 'block';
+            } else {
+                avgHrDiv.style.display = 'none';
+            }
+
+            if (dataToShow?.average_speed) {
+                const { value, unit } = formatSpeed(dataToShow.average_speed, dataToShow.type);
+                ovAvgSpeed.textContent = value;
+                ovAvgSpeedUnit.textContent = unit;
+                avgSpeedDiv.style.display = value !== '--' ? 'block' : 'none';
+            } else {
+                avgSpeedDiv.style.display = 'none';
+            }
+
+            if (dataToShow?.suffer_score) {
+                ovSufferScore.textContent = dataToShow.suffer_score;
+                sufferScoreDiv.style.display = 'block';
+            } else {
+                sufferScoreDiv.style.display = 'none';
+            }
         }
 
         function loadImageFromFile(file) {
