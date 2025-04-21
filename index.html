@@ -145,28 +145,31 @@
         #statsCard {
             position: absolute;
             bottom: 1rem;
-            left: 1rem;
+            left: 0.2rem;
+            right: auto;
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
             color: #fff;
             border-radius: 0.75rem; /* Slightly larger radius */
-            padding: 0.75rem 1rem; /* Adjust padding */
+            padding: 0.4rem 0.6rem; /* Slightly reduced padding */
             cursor: grab;
             user-select: none;
             -webkit-user-select: none;
             touch-action: none; /* Prevent scrolling on touch */
-            width: clamp(200px, 45%, 280px); /* Adjusted width slightly */
+            max-width: 50%; /* Added max-width constraint */
+            max-height: 40%; /* Relaxed max-height constraint */
+            overflow: hidden; /* Prevent content overflow */
             border: 1px solid rgba(255, 255, 255, 0.1);
             visibility: hidden;
             display: flex; /* Use flexbox for layout */
             flex-direction: column; /* Stack items vertically */
-            gap: 0.4rem; /* Add gap between title and stats-row */
+            gap: 0.15rem; /* Further reduced gap */
         }
         #statsCard:active {
             cursor: grabbing;
         }
         #statsCard h2 {
-            font-size: 0.9rem; /* Smaller title */
+            font-size: 0.7rem; /* Further reduced title size */
             font-weight: 600;
             margin-bottom: 0; /* Remove default margin */
             overflow: hidden;
@@ -176,48 +179,60 @@
             -webkit-line-clamp: 2; /* Limit to 2 lines */
             line-clamp: 2; /* Standard property */
             -webkit-box-orient: vertical;
-            line-height: 1.2; /* Adjust line height for multi-line */
+            line-height: 1.1; /* Slightly reduced line height */
+            min-height: 1.6em; /* Ensure minimum space for two lines */
+            flex-shrink: 0; /* Prevent title from shrinking vertically */
         }
         /* New container for icon and grid */
         .stats-row {
             display: flex;
             align-items: center; /* Vertically align icon and grid */
-            gap: 0.75rem; /* Space between icon and grid */
+            gap: 0.5rem; /* Further reduced space */
+            flex-grow: 1; /* Allow this row to take remaining space */
+            min-height: 0; /* Allow shrinking if needed within flex context */
         }
         /* Activity Icon Style */
         #activityIcon {
-            font-size: 1.8rem; /* Slightly larger icon */
+            font-size: 1.3rem; /* Further reduced icon size */
             line-height: 1;
             color: var(--strava-orange);
             flex-shrink: 0; /* Prevent icon from shrinking */
+            align-self: stretch; /* Stretch icon vertically if needed */
+            display: flex;
+            align-items: center;
         }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: auto auto; /* Add this for two rows */
-            gap: 0.5rem;
+            gap: 0.2rem 0.2rem; /* Further reduced gap (row column) */
             text-align: center;
             flex-grow: 1; /* Allow grid to take remaining space */
+            min-height: 0; /* Allow shrinking */
         }
         /* Ensure unit styles are applied */
         .stats-grid div span:first-child { /* Number */
             display: block;
-            font-size: 1.1rem;
+            font-size: 0.7rem; /* Further reduced font size */
             font-weight: 700;
-            line-height: 1.2;
+            line-height: 1.1;
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .stats-grid div span:last-child { /* Unit */
             display: block;
-            font-size: 0.65rem;
+            font-size: 0.55rem; /* Further reduced font size */
             text-transform: uppercase;
             color: #cbd5e1;
             opacity: 0.9;
             line-height: 1;
+            white-space: nowrap; /* Prevent wrapping */
         }
         .no-select { /* Utility class */
             user-select: none;
             -webkit-user-select: none;
-            -ms-user-select: none;
+            -ms-user-select: none; /* Added for IE/Edge */
         }
         /* Action Buttons Styling */
         .action-buttons {
@@ -354,6 +369,42 @@
             { id: 'mock-other', name: 'Gym Session', type: 'Workout', distance: 0, moving_time: 3600, total_elevation_gain: 0, start_date_local: new Date(Date.now() - 5*86400000).toISOString(), average_heartrate: 110.0 }
         ];
         let selectedMockActivity = mockActivities[0];
+
+        // --- NEW: Debounce Function ---
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // --- NEW: Scaling Constants ---
+        const BASE_PREVIEW_WIDTH = 360; // Reference width where scale is 1
+        const MAX_SCALE_FACTOR = 1.8; // Optional: Limit maximum scaling
+
+        // --- NEW: Scaling Function ---
+        function updateOverlayScale() {
+            // Ensure wrapper and overlay exist and image is loaded/visible
+            if (!wrapper || !overlay || !img.complete || img.naturalWidth === 0 || overlay.style.visibility === 'hidden') {
+                return;
+            }
+
+            const currentWidth = wrapper.clientWidth;
+            let scaleFactor = currentWidth / BASE_PREVIEW_WIDTH;
+            // Clamp scale factor between 1 and the max limit
+            scaleFactor = Math.max(1, Math.min(MAX_SCALE_FACTOR, scaleFactor));
+
+            overlay.style.transformOrigin = 'bottom left'; // Scale from the initial position
+            overlay.style.transform = `scale(${scaleFactor})`;
+        }
+
+        // --- NEW: Debounced version for resize events ---
+        const debouncedUpdateOverlayScale = debounce(updateOverlayScale, 100);
 
         function loadAuthData() {
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -573,8 +624,9 @@
             reader.onload = (e) => {
                 img.onload = () => {
                     enableDownload();
-                    resetOverlayPosition();
+                    resetOverlayPosition(); // Reset position before scaling
                     overlay.style.visibility = 'visible';
+                    updateOverlayScale(); // <<< Apply scale after image loads
                 };
                 img.onerror = () => {
                     console.error("Error loading image.");
@@ -615,6 +667,7 @@
             overlay.style.left = '1rem';
             overlay.style.top = '';
             overlay.style.bottom = '1rem';
+            overlay.style.transform = 'scale(1)'; // Reset scale on position reset
         }
 
         function pointerDown(ev) {
@@ -635,6 +688,7 @@
             overlay.style.cursor = 'grabbing';
         }
 
+        // --- MODIFIED: pointerMove to use scaled dimensions for constraints ---
         function pointerMove(ev) {
             if (!drag) return;
             ev.preventDefault();
@@ -642,10 +696,20 @@
             const dy = ev.clientY - drag.startY;
             let newX = drag.origX + dx;
             let newY = drag.origY + dy;
-            const maxX = wrapper.clientWidth - overlay.offsetWidth;
-            const maxY = wrapper.clientHeight - overlay.offsetHeight;
+
+            // Get scaled dimensions using getBoundingClientRect
+            const overlayRect = overlay.getBoundingClientRect();
+            const scaledWidth = overlayRect.width;
+            const scaledHeight = overlayRect.height;
+
+            // Calculate max X/Y based on wrapper dimensions and scaled overlay dimensions
+            const maxX = wrapper.clientWidth - scaledWidth;
+            const maxY = wrapper.clientHeight - scaledHeight;
+
+            // Clamp position
             newX = Math.max(0, Math.min(maxX, newX));
             newY = Math.max(0, Math.min(maxY, newY));
+
             overlay.style.left = `${newX}px`;
             overlay.style.top = `${newY}px`;
         }
@@ -733,19 +797,25 @@
         function init() {
             loadAuthData();
             img.onload = () => {
-                resetOverlayPosition();
-                overlay.style.visibility = 'visible'; 
+                resetOverlayPosition(); // Resets scale too
+                overlay.style.visibility = 'visible';
                 disableDownload();
                 updateOverlay(authData ? null : selectedMockActivity);
+                updateOverlayScale(); // <<< Apply scale after placeholder loads
             };
             img.onerror = () => {
                 img.alt = 'Placeholder image failed to load.';
-                overlay.style.visibility = 'visible'; 
+                resetOverlayPosition(); // Resets scale too
+                overlay.style.visibility = 'visible';
                 disableDownload();
                 updateOverlay(authData ? null : selectedMockActivity);
+                updateOverlayScale(); // <<< Apply scale even if placeholder fails
             };
             img.src = 'https://picsum.photos/id/17/1600/1200';
             img.alt = 'Placeholder image - a landscape';
+
+            // --- NEW: Add resize listener ---
+            window.addEventListener('resize', debouncedUpdateOverlayScale);
         }
         init();
     })();
