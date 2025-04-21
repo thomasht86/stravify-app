@@ -147,7 +147,7 @@
             bottom: 1rem;
             left: 0.2rem;
             right: auto;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(52, 54, 54, 0.243);
             backdrop-filter: blur(4px);
             color: #fff;
             border-radius: 0.75rem; /* Slightly larger radius */
@@ -159,7 +159,7 @@
             max-width: 50%; /* Added max-width constraint */
             max-height: 40%; /* Relaxed max-height constraint */
             overflow: hidden; /* Prevent content overflow */
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            /* border: 1px solid rgba(255, 255, 255, 0.1); */
             visibility: hidden;
             display: flex; /* Use flexbox for layout */
             flex-direction: column; /* Stack items vertically */
@@ -187,17 +187,16 @@
         .stats-row {
             display: flex;
             align-items: center; /* Vertically align icon and grid */
-            gap: 0.5rem; /* Further reduced space */
+            gap: 0.3rem; /* Further reduced space */
             flex-grow: 1; /* Allow this row to take remaining space */
             min-height: 0; /* Allow shrinking if needed within flex context */
         }
         /* Activity Icon Style */
         #activityIcon {
-            font-size: 1.3rem; /* Further reduced icon size */
+            font-size: 1.5rem; /* Further reduced icon size */
             line-height: 1;
-            color: var(--strava-orange);
+            color: white; /* var(--strava-orange); */
             flex-shrink: 0; /* Prevent icon from shrinking */
-            align-self: stretch; /* Stretch icon vertically if needed */
             display: flex;
             align-items: center;
         }
@@ -399,7 +398,7 @@
             // Clamp scale factor between 1 and the max limit
             scaleFactor = Math.max(1, Math.min(MAX_SCALE_FACTOR, scaleFactor));
 
-            overlay.style.transformOrigin = 'bottom left'; // Scale from the initial position
+            overlay.style.transformOrigin = 'top left'; // <<< CHANGED from 'bottom left'
             overlay.style.transform = `scale(${scaleFactor})`;
         }
 
@@ -665,8 +664,8 @@
 
         function resetOverlayPosition() {
             overlay.style.left = '1rem';
-            overlay.style.top = '';
-            overlay.style.bottom = '1rem';
+            overlay.style.top = '1rem'; // <<< CHANGED from 'bottom: 1rem'
+            overlay.style.bottom = 'auto'; // <<< Ensure bottom is not set
             overlay.style.transform = 'scale(1)'; // Reset scale on position reset
         }
 
