@@ -370,6 +370,8 @@
         let authData = null;
         let drag = null;
         let currentActivities = [];
+        let originalImageWidth = null;
+        let originalImageHeight = null;
         // Updated mock data
         const mockActivities = [
             { id: 'mock-run', name: 'Morning Run', type: 'Run', distance: 5123.4, moving_time: 1800, total_elevation_gain: 55.6, start_date_local: new Date(Date.now() - 86400000).toISOString(), average_heartrate: 155.2, average_speed: 2.846, suffer_score: 45 },
@@ -597,6 +599,10 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 img.onload = () => {
+                    originalImageWidth = img.naturalWidth;
+                    originalImageHeight = img.naturalHeight;
+                    console.log(`Original image dimensions: ${originalImageWidth}x${originalImageHeight}`);
+
                     enableDownload();
                     resetOverlayPosition(); // Reset position
                     overlay.style.visibility = 'visible';
@@ -606,6 +612,8 @@
                     alert("Could not load the selected image file.");
                     disableDownload();
                     overlay.style.visibility = 'hidden';
+                    originalImageWidth = null;
+                    originalImageHeight = null;
                 };
                 img.src = e.target.result;
                 img.alt = `Preview of ${file.name}`;
@@ -615,6 +623,8 @@
                 alert("Could not read the selected file.");
                 disableDownload();
                 overlay.style.visibility = 'hidden';
+                originalImageWidth = null;
+                originalImageHeight = null;
             };
             reader.readAsDataURL(file);
         }
@@ -719,8 +729,15 @@
             wrapper.style.borderRadius = '0';
             const overlayWasVisible = overlay.style.visibility !== 'hidden';
             overlay.style.visibility = 'visible';
-            const finalScale = 1;
-
+            let finalScale = 1;
+            const displayedWidth = img.clientWidth;
+            if (originalImageWidth && displayedWidth > 0) {
+                finalScale = originalImageWidth / displayedWidth;
+                console.log(`Calculated finalScale for html2canvas: ${finalScale} (Original: ${originalImageWidth}, Displayed: ${displayedWidth})`);
+            } else {
+                console.warn("Could not determine original image width or preview width for scaling. Using scale 1.");
+            }
+            finalScale = Math.max(1, Math.min(finalScale, 10));
             return html2canvas(wrapper, {
                 useCORS: true, 
                 allowTaint: true, 
@@ -736,7 +753,7 @@
                         } else {
                             reject(new Error("Failed to create blob"));
                         }
-                    }, 'image/png');
+                    }, 'image/jpeg', 0.9);
                 });
             })
             .catch(error => {
@@ -755,7 +772,7 @@
         downloadBtn.addEventListener('click', () => {
             capture().then(({ canvas, blob }) => {
                 const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15); 
-                const filename = `stravify_${timestamp}.png`;
+                const filename = `stravify_${timestamp}.jpg`;
                 const link = document.createElement('a');
                 link.download = filename;
                 link.href = URL.createObjectURL(blob);
@@ -765,16 +782,27 @@
         });
 
         function init() {
+            originalImageWidth = null;
+            originalImageHeight = null;
             loadAuthData();
             img.onload = () => {
-                resetOverlayPosition(); // Resets position only
+                originalImageWidth = img.naturalWidth;
+                originalImageHeight = img.naturalHeight;
+                console.log(`Initial image dimensions: ${originalImageWidth}x${originalImageHeight}`);
+                resetOverlayPosition(); 
                 overlay.style.visibility = 'visible';
-                disableDownload(); // Disable initially until image loads
+                if (img.src && !img.src.startsWith('https://picsum.photos/')) {
+                    enableDownload();
+                } else {
+                    disableDownload();
+                }
                 updateOverlay(authData ? null : selectedMockActivity);
             };
             img.onerror = () => {
                 img.alt = 'Placeholder image failed to load.';
-                resetOverlayPosition(); // Resets position only
+                originalImageWidth = null;
+                originalImageHeight = null;
+                resetOverlayPosition(); 
                 overlay.style.visibility = 'visible';
                 disableDownload();
                 updateOverlay(authData ? null : selectedMockActivity);
