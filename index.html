@@ -144,8 +144,8 @@
         /* Overlay Card */
         #statsCard {
             position: absolute;
-            bottom: 1rem;
-            left: 0.2rem;
+            top: 1rem;
+            left: 1rem;
             right: auto;
             background: rgba(52, 54, 54, 0.243);
             backdrop-filter: blur(4px);
@@ -156,10 +156,7 @@
             user-select: none;
             -webkit-user-select: none;
             touch-action: none; /* Prevent scrolling on touch */
-            max-width: 50%; /* Added max-width constraint */
-            max-height: 40%; /* Relaxed max-height constraint */
             overflow: hidden; /* Prevent content overflow */
-            /* border: 1px solid rgba(255, 255, 255, 0.1); */
             visibility: hidden;
             display: flex; /* Use flexbox for layout */
             flex-direction: column; /* Stack items vertically */
@@ -360,7 +357,6 @@
         let authData = null;
         let drag = null;
         let currentActivities = [];
-        // Updated mock data
         const mockActivities = [
             { id: 'mock-run', name: 'Morning Run', type: 'Run', distance: 5123.4, moving_time: 1800, total_elevation_gain: 55.6, start_date_local: new Date(Date.now() - 86400000).toISOString(), average_heartrate: 155.2, average_speed: 2.846, suffer_score: 45 },
             { id: 'mock-ride', name: 'Weekend Ride', type: 'Ride', distance: 25450.1, moving_time: 5400, total_elevation_gain: 210.3, start_date_local: new Date(Date.now() - 2*86400000).toISOString(), average_heartrate: 138.9, average_speed: 4.713, suffer_score: 60 },
@@ -369,42 +365,6 @@
             { id: 'mock-other', name: 'Gym Session', type: 'Workout', distance: 0, moving_time: 3600, total_elevation_gain: 0, start_date_local: new Date(Date.now() - 5*86400000).toISOString(), average_heartrate: 110.0 }
         ];
         let selectedMockActivity = mockActivities[0];
-
-        // --- NEW: Debounce Function ---
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        // --- NEW: Scaling Constants ---
-        const BASE_PREVIEW_WIDTH = 360; // Reference width where scale is 1
-        const MAX_SCALE_FACTOR = 1.8; // Optional: Limit maximum scaling
-
-        // --- NEW: Scaling Function ---
-        function updateOverlayScale() {
-            // Ensure wrapper and overlay exist and image is loaded/visible
-            if (!wrapper || !overlay || !img.complete || img.naturalWidth === 0 || overlay.style.visibility === 'hidden') {
-                return;
-            }
-
-            const currentWidth = wrapper.clientWidth;
-            let scaleFactor = currentWidth / BASE_PREVIEW_WIDTH;
-            // Clamp scale factor between 1 and the max limit
-            scaleFactor = Math.max(1, Math.min(MAX_SCALE_FACTOR, scaleFactor));
-
-            overlay.style.transformOrigin = 'top left'; // <<< CHANGED from 'bottom left'
-            overlay.style.transform = `scale(${scaleFactor})`;
-        }
-
-        // --- NEW: Debounced version for resize events ---
-        const debouncedUpdateOverlayScale = debounce(updateOverlayScale, 100);
 
         function loadAuthData() {
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -624,9 +584,8 @@
             reader.onload = (e) => {
                 img.onload = () => {
                     enableDownload();
-                    resetOverlayPosition(); // Reset position before scaling
+                    resetOverlayPosition(); // Reset position
                     overlay.style.visibility = 'visible';
-                    updateOverlayScale(); // <<< Apply scale after image loads
                 };
                 img.onerror = () => {
                     console.error("Error loading image.");
@@ -665,9 +624,9 @@
 
         function resetOverlayPosition() {
             overlay.style.left = '1rem';
-            overlay.style.top = '1rem'; // <<< CHANGED from 'bottom: 1rem'
-            overlay.style.bottom = 'auto'; // <<< Ensure bottom is not set
-            overlay.style.transform = 'scale(1)'; // Reset scale on position reset
+            overlay.style.top = '1rem';
+            overlay.style.bottom = 'auto';
+            overlay.style.right = 'auto';
         }
 
         function pointerDown(ev) {
@@ -688,7 +647,6 @@
             overlay.style.cursor = 'grabbing';
         }
 
-        // --- MODIFIED: pointerMove to use scaled dimensions for constraints ---
         function pointerMove(ev) {
             if (!drag) return;
             ev.preventDefault();
@@ -697,16 +655,12 @@
             let newX = drag.origX + dx;
             let newY = drag.origY + dy;
 
-            // Get scaled dimensions using getBoundingClientRect
-            const overlayRect = overlay.getBoundingClientRect();
-            const scaledWidth = overlayRect.width;
-            const scaledHeight = overlayRect.height;
+            const overlayWidth = overlay.offsetWidth;
+            const overlayHeight = overlay.offsetHeight;
 
-            // Calculate max X/Y based on wrapper dimensions and scaled overlay dimensions
-            const maxX = wrapper.clientWidth - scaledWidth;
-            const maxY = wrapper.clientHeight - scaledHeight;
+            const maxX = wrapper.clientWidth - overlayWidth;
+            const maxY = wrapper.clientHeight - overlayHeight;
 
-            // Clamp position
             newX = Math.max(0, Math.min(maxX, newX));
             newY = Math.max(0, Math.min(maxY, newY));
 
@@ -745,77 +699,113 @@
             }
         }
 
-        const capture = () => {
+        const capture = async () => {
             setLoadingState(true, downloadBtn);
-            const prevRadius = wrapper.style.borderRadius;
-            wrapper.style.borderRadius = '0';
             const overlayWasVisible = overlay.style.visibility !== 'hidden';
-            overlay.style.visibility = 'visible';
-            return html2canvas(wrapper, {
-                useCORS: true, 
-                allowTaint: true, 
-                backgroundColor: null, 
-                scale: 1, 
-                logging: false 
-            })
-            .then(canvas => {
-                return new Promise((resolve, reject) => { 
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            resolve({ canvas, blob });
-                        } else {
-                            reject(new Error("Failed to create blob"));
-                        }
-                    }, 'image/png');
+
+            if (!overlayWasVisible) overlay.style.visibility = 'visible';
+
+            try {
+                const originalWidth = img.naturalWidth;
+                const originalHeight = img.naturalHeight;
+                const previewWidth = img.offsetWidth;
+                const previewHeight = img.offsetHeight;
+
+                if (!originalWidth || !originalHeight || !previewWidth || !previewHeight) {
+                    throw new Error("Image dimensions not available.");
+                }
+
+                const overlayX_preview = overlay.offsetLeft;
+                const overlayY_preview = overlay.offsetTop;
+
+                const renderScale = originalWidth / previewWidth;
+
+                const targetOverlayX = overlayX_preview * renderScale;
+                const targetOverlayY = overlayY_preview * renderScale;
+
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = originalWidth;
+                finalCanvas.height = originalHeight;
+                const ctx = finalCanvas.getContext('2d');
+
+                await img.decode();
+                ctx.drawImage(img, 0, 0, originalWidth, originalHeight);
+
+                const overlayCanvas = await html2canvas(overlay, {
+                    scale: renderScale,
+                    backgroundColor: null,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
                 });
-            })
-            .catch(error => {
+
+                ctx.drawImage(
+                    overlayCanvas,
+                    targetOverlayX,
+                    targetOverlayY,
+                    overlayCanvas.width,
+                    overlayCanvas.height
+                );
+
+                return new Promise((resolve, reject) => {
+                    finalCanvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve({ canvas: finalCanvas, blob });
+                        } else {
+                            reject(new Error("Failed to create blob from final canvas"));
+                        }
+                    }, 'image/jpeg', 0.92);
+                });
+
+            } catch (error) {
+                console.error("Error during capture:", error);
                 alert(`Failed to capture image. Error: ${error.message}`);
                 return Promise.reject(error);
-            })
-            .finally(() => {
-                wrapper.style.borderRadius = prevRadius;
+            } finally {
                 if (!overlayWasVisible) {
-                    overlay.style.visibility = 'hidden'; 
+                    overlay.style.visibility = 'hidden';
                 }
                 setLoadingState(false, downloadBtn);
-            });
+            }
         };
 
         downloadBtn.addEventListener('click', () => {
-            capture().then(({ canvas, blob }) => {
-                const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15); 
-                const filename = `stravify_${timestamp}.png`;
+            capture().then(({ blob }) => {
+                const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15);
+                const filename = `stravify_${timestamp}.jpg`;
                 const link = document.createElement('a');
                 link.download = filename;
                 link.href = URL.createObjectURL(blob);
                 link.click();
-                URL.revokeObjectURL(link.href); 
-            }).catch(err => { });
+                URL.revokeObjectURL(link.href);
+            }).catch(err => {
+                console.error("Download failed:", err);
+            });
         });
 
         function init() {
             loadAuthData();
             img.onload = () => {
-                resetOverlayPosition(); // Resets scale too
+                resetOverlayPosition();
                 overlay.style.visibility = 'visible';
-                disableDownload();
                 updateOverlay(authData ? null : selectedMockActivity);
-                updateOverlayScale(); // <<< Apply scale after placeholder loads
             };
             img.onerror = () => {
                 img.alt = 'Placeholder image failed to load.';
-                resetOverlayPosition(); // Resets scale too
+                resetOverlayPosition();
                 overlay.style.visibility = 'visible';
                 disableDownload();
                 updateOverlay(authData ? null : selectedMockActivity);
-                updateOverlayScale(); // <<< Apply scale even if placeholder fails
             };
             img.src = 'https://picsum.photos/id/17/1600/1200';
             img.alt = 'Placeholder image - a landscape';
 
-            // --- NEW: Add resize listener ---
-            window.addEventListener('resize', debouncedUpdateOverlayScale);
+            disableDownload();
+            updateOverlay(authData ? null : selectedMockActivity);
+            resetOverlayPosition();
+            overlay.style.visibility = 'visible';
         }
         init();
     })();
