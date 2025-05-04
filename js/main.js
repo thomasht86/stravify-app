@@ -1,5 +1,5 @@
 import { mockActivities } from './config.js';
-import { loadAuthData, updateStravaButtonState, fetchActivities, getAuthData } from './strava.js';
+import { loadAuthData, updateStravaButtonState, fetchActivities, getAuthData, decodePolyline, centroid, project, fit, drawMap } from './strava.js';
 import {
     domElements,
     populateActivitiesSelect,
@@ -20,6 +20,44 @@ let selectedActivity = mockActivities[0]; // Default to first mock activity
 
 // --- Functions ---
 
+/**
+ * Processes and draws the map polyline for the given activity onto the canvas.
+ * Hides the canvas if no map data is available.
+ * @param {object | null} activity The activity object, or null.
+ */
+function drawActivityMap(activity) {
+    const canvasElement = domElements.activityMapCanvas; // Get canvas from domElements
+    if (!canvasElement) {
+        console.error("Map canvas element not found in domElements.");
+        return;
+    }
+
+    const mapData = activity?.map?.summary_polyline; // Use optional chaining
+
+    if (mapData) {
+        try {
+            const decodedCoords = decodePolyline(mapData);
+            if (decodedCoords.length > 0) {
+                const center = centroid([decodedCoords]);
+                const projectedCoords = project(decodedCoords, center);
+                // Use canvasElement.width for size, assuming it's set correctly (e.g., 200)
+                const fittedCoords = fit([projectedCoords], canvasElement.width);
+                drawMap(canvasElement, fittedCoords, canvasElement.width); // Call imported drawMap
+            } else {
+                // Handle case where polyline is present but empty/invalid
+                console.warn("Activity has empty or invalid polyline data.");
+                drawMap(canvasElement, [], canvasElement.width); // Hide the canvas
+            }
+        } catch (error) {
+            console.error("Error processing map polyline:", error);
+            drawMap(canvasElement, [], canvasElement.width); // Hide canvas on error
+        }
+    } else {
+        // No map data, ensure canvas is hidden
+        drawMap(canvasElement, [], canvasElement.width); // Hide the canvas
+    }
+}
+
 function handleActivitySelectionChange(e) {
     const selectedOption = e.target.selectedOptions[0];
     const selectedIndex = selectedOption?.dataset.index;
@@ -28,15 +66,14 @@ function handleActivitySelectionChange(e) {
 
     if (isMock && selectedIndex !== undefined && mockActivities[selectedIndex]) {
         selectedActivity = mockActivities[selectedIndex];
-        updateOverlay(selectedActivity);
     } else if (!isMock && selectedIndex !== undefined && currentActivities[selectedIndex]) {
         selectedActivity = currentActivities[selectedIndex];
-        updateOverlay(selectedActivity);
     } else {
         // Fallback if selection is somehow invalid
         selectedActivity = authData ? null : mockActivities[0];
-        updateOverlay(selectedActivity);
     }
+    updateOverlay(selectedActivity);
+    drawActivityMap(selectedActivity); // Draw map after updating overlay
 }
 
 function handleImageLoad(success, isInitial = false) {
@@ -47,8 +84,9 @@ function handleImageLoad(success, isInitial = false) {
         // Disable download button on load failure
         domElements.downloadBtn.disabled = true;
     }
-    // Update overlay with the currently selected activity after image load/error
+    // Update overlay and map with the currently selected activity after image load/error
     updateOverlay(selectedActivity);
+    drawActivityMap(selectedActivity);
 }
 
 function handleStravaConnectCallback(activities) {
@@ -56,7 +94,11 @@ function handleStravaConnectCallback(activities) {
     const authData = getAuthData();
     // If connected and have activities, use the first real one, else use mock/null
     selectedActivity = (authData && activities.length > 0) ? activities[0] : (!authData ? mockActivities[0] : null);
-    populateActivitiesSelect(currentActivities, updateOverlay); // Populate select and trigger initial overlay update
+    // Populate select and trigger initial overlay update AND map draw
+    populateActivitiesSelect(currentActivities, (activity) => {
+        updateOverlay(activity);
+        drawActivityMap(activity); // Draw map within the callback
+    });
 }
 
 function handleDownload() {
@@ -86,6 +128,7 @@ function init() {
         'https://picsum.photos/id/17/1600/1200',
         'Placeholder image - a landscape',
         (success, isInitial) => {
+            // This callback now handles the initial overlay/map update AFTER image load
             handleImageLoad(success, isInitial);
             // 3. Update Strava Button state (which triggers activity fetch/population)
             updateStravaButtonState(
@@ -95,7 +138,7 @@ function init() {
             );
         }
     );
-
+    // Note: Initial updateOverlay/drawActivityMap is now handled within setInitialImage callback
 
     // 4. Setup Event Listeners
     domElements.uploadArea.addEventListener('click', () => domElements.fileInput.click());
@@ -117,7 +160,6 @@ function init() {
     domElements.wrapper.addEventListener('pointerup', pointerUp);
     // Add pointerleave as well to handle cases where the pointer leaves the wrapper while dragging
     domElements.wrapper.addEventListener('pointerleave', pointerUp);
-
 
     domElements.downloadBtn.addEventListener('click', handleDownload);
 

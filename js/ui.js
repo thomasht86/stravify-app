@@ -30,6 +30,7 @@ export const domElements = {
     ovAvgSpeedUnit: getElement('avgSpeedUnit'),
     sufferScoreDiv: getElement('sufferScoreDiv'),
     ovSufferScore: getElement('sufferScore'),
+    activityMapCanvas: getElement('activityMapCanvas'),
 };
 
 // --- Utility Functions ---
