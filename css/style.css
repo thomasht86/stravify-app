@@ -226,6 +226,12 @@ main {
     }
 }
 
+/* NEW: Style for Map Toggle Container */
+#mapToggleContainer {
+    margin-bottom: 1rem; /* Consistent spacing */
+    text-align: center; /* Center the checkbox label */
+}
+
 /* Activity Map Canvas */
 #activityMapCanvas {
     display: none; /* Hide by default, JS will show it */
@@ -233,7 +239,7 @@ main {
     margin-left: auto; /* Center within the card */
     margin-right: auto; /* Center within the card */
     height: auto;
-    aspect-ratio: 1 / 1; /* Maintain a square aspect ratio */
+    aspect-ratio: 1 / 0.6; /* Was 1 / 1 */
     border-radius: calc(var(--pico-border-radius) / 2); /* Optional: slightly smaller radius */
     margin-top: clamp(0.1rem, 1cqi, 0.3rem); /* Add space above the map */
     flex-shrink: 0; /* Prevent shrinking */

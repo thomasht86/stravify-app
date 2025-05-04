@@ -17,12 +17,25 @@ import {
 // --- State ---
 let currentActivities = [];
 let selectedActivity = mockActivities[0]; // Default to first mock activity
+// Query the new checkbox element
+const addMapCheckbox = document.getElementById('addMapCheckbox');
 
 // --- Functions ---
 
 /**
- * Processes and draws the map polyline for the given activity onto the canvas.
- * Hides the canvas if no map data is available.
+ * Shows or hides the 'Add map' checkbox container based on
+ * whether the provided activity has map data.
+ * @param {object | null} activity The activity object to check.
+ */
+function updateMapToggleVisibility(activity) {
+    const hasMapData = !!activity?.map?.summary_polyline;
+    domElements.mapToggleContainer.style.display = hasMapData ? 'block' : 'none';
+}
+
+/**
+ * Processes and draws the map polyline for the given activity onto the canvas,
+ * respecting the state of the 'Add map' checkbox.
+ * Hides the canvas if no map data is available or if the checkbox is unchecked.
  * @param {object | null} activity The activity object, or null.
  */
 function drawActivityMap(activity) {
@@ -32,29 +45,31 @@ function drawActivityMap(activity) {
         return;
     }
 
+    // Check if the map should be added based on the checkbox
+    const shouldAddMap = addMapCheckbox.checked;
     const mapData = activity?.map?.summary_polyline; // Use optional chaining
 
-    if (mapData) {
-        try {
-            const decodedCoords = decodePolyline(mapData);
-            if (decodedCoords.length > 0) {
-                const center = centroid([decodedCoords]);
-                const projectedCoords = project(decodedCoords, center);
-                // Use canvasElement.width for size, assuming it's set correctly (e.g., 200)
-                const fittedCoords = fit([projectedCoords], canvasElement.width);
-                drawMap(canvasElement, fittedCoords, canvasElement.width); // Call imported drawMap
-            } else {
-                // Handle case where polyline is present but empty/invalid
-                console.warn("Activity has empty or invalid polyline data.");
-                drawMap(canvasElement, [], canvasElement.width); // Hide the canvas
-            }
-        } catch (error) {
-            console.error("Error processing map polyline:", error);
-            drawMap(canvasElement, [], canvasElement.width); // Hide canvas on error
-        }
-    } else {
-        // No map data, ensure canvas is hidden
+    // Hide map if checkbox is unchecked or no map data exists
+    if (!shouldAddMap || !mapData) {
         drawMap(canvasElement, [], canvasElement.width); // Hide the canvas
+        return; // Exit early
+    }
+
+    // Proceed with drawing if checkbox is checked and map data exists
+    try {
+        const decodedCoords = decodePolyline(mapData);
+        if (decodedCoords.length > 0) {
+            const center = centroid([decodedCoords]);
+            const projectedCoords = project(decodedCoords, center);
+            const fittedCoords = fit([projectedCoords], canvasElement.width);
+            drawMap(canvasElement, fittedCoords, canvasElement.width); // Call imported drawMap
+        } else {
+            console.warn("Activity has empty or invalid polyline data.");
+            drawMap(canvasElement, [], canvasElement.width); // Hide the canvas
+        }
+    } catch (error) {
+        console.error("Error processing map polyline:", error);
+        drawMap(canvasElement, [], canvasElement.width); // Hide canvas on error
     }
 }
 
@@ -74,6 +89,7 @@ function handleActivitySelectionChange(e) {
     }
     updateOverlay(selectedActivity);
     drawActivityMap(selectedActivity); // Draw map after updating overlay
+    updateMapToggleVisibility(selectedActivity); // Update toggle visibility
 }
 
 function handleImageLoad(success, isInitial = false) {
@@ -87,13 +103,26 @@ function handleImageLoad(success, isInitial = false) {
     // Update overlay and map with the currently selected activity after image load/error
     updateOverlay(selectedActivity);
     drawActivityMap(selectedActivity);
+    updateMapToggleVisibility(selectedActivity); // Update toggle visibility
 }
 
 function handleStravaConnectCallback(activities) {
     currentActivities = activities; // Store fetched activities
     const authData = getAuthData();
-    // If connected and have activities, use the first real one, else use mock/null
+
+    // Determine selected activity
     selectedActivity = (authData && activities.length > 0) ? activities[0] : (!authData ? mockActivities[0] : null);
+
+    // Determine visibility for activity picker
+    const hasRealActivities = authData && activities.length > 0;
+    const hasMockActivities = !authData && mockActivities.length > 0;
+    const showActivityPicker = hasRealActivities || hasMockActivities;
+
+    // Set display styles
+    domElements.activityPicker.style.display = showActivityPicker ? 'grid' : 'none';
+    // Update map toggle based on the initially selected activity
+    updateMapToggleVisibility(selectedActivity);
+
     // Populate select and trigger initial overlay update AND map draw
     populateActivitiesSelect(currentActivities, (activity) => {
         updateOverlay(activity);
@@ -153,6 +182,11 @@ function init() {
     });
 
     domElements.activitiesSelect.addEventListener('change', handleActivitySelectionChange);
+
+    // Add listener for the map checkbox
+    addMapCheckbox.addEventListener('change', () => {
+        drawActivityMap(selectedActivity); // Redraw map based on new checkbox state
+    });
 
     // Overlay Drag Listeners (attach to wrapper for better event delegation)
     domElements.wrapper.addEventListener('pointerdown', pointerDown);
