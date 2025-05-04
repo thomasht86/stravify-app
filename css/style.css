@@ -147,9 +147,7 @@ main {
     -webkit-user-select: none;
     touch-action: none; /* Prevent scrolling on touch */
     max-width: 50%; /* Added max-width constraint */
-    max-height: 30%; /* Relaxed max-height constraint */
     min-width: 40%;
-    min-height: 15%;
     overflow: hidden; /* Prevent content overflow */
     visibility: hidden;
     display: flex; /* Use flexbox for layout */
@@ -226,6 +224,26 @@ main {
         padding: clamp(0.3rem, 2.5cqi, 0.8rem) clamp(0.4rem, 3cqi, 1rem);
         gap: clamp(0.1rem, 1cqi, 0.3rem); /* Scale gap between title and stats-row */
     }
+}
+
+/* NEW: Style for Map Toggle Container */
+#mapToggleContainer {
+    margin-bottom: 1rem; /* Consistent spacing */
+    text-align: center; /* Center the checkbox label */
+}
+
+/* Activity Map Canvas */
+#activityMapCanvas {
+    display: none; /* Hide by default, JS will show it */
+    width: calc(100% - 2 * clamp(0.4rem, 3cqi, 1rem)); /* Adjust width based on card padding */
+    margin-left: auto; /* Center within the card */
+    margin-right: auto; /* Center within the card */
+    height: auto;
+    aspect-ratio: 1 / 0.6; /* Was 1 / 1 */
+    border-radius: calc(var(--pico-border-radius) / 2); /* Optional: slightly smaller radius */
+    margin-top: clamp(0.1rem, 1cqi, 0.3rem); /* Add space above the map */
+    flex-shrink: 0; /* Prevent shrinking */
+    /* border: 1px solid var(--pico-muted-border-color); */ /* Optional: add a border */
 }
 
 .no-select { /* Utility class */

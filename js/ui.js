@@ -16,6 +16,7 @@ export const domElements = {
     overlay: getElement('statsCard'),
     activityPicker: getElement('activityPicker'),
     activitiesSelect: getElement('activities'),
+    mapToggleContainer: getElement('mapToggleContainer'), // Add map toggle container
     stravaBtn: getElement('stravaBtn'),
     stravaStatusIndicator: getElement('stravaStatusIndicator'),
     ovTitle: getElement('activityTitle'),
@@ -30,6 +31,7 @@ export const domElements = {
     ovAvgSpeedUnit: getElement('avgSpeedUnit'),
     sufferScoreDiv: getElement('sufferScoreDiv'),
     ovSufferScore: getElement('sufferScore'),
+    activityMapCanvas: getElement('activityMapCanvas'),
 };
 
 // --- Utility Functions ---
@@ -100,9 +102,8 @@ export function formatSpeed(speedMps, activityType) {
 // --- UI Update Functions ---
 
 export function populateActivitiesSelect(activities, onActivitySelected) {
-    const { activitiesSelect, activityPicker } = domElements;
+    const { activitiesSelect } = domElements;
     activitiesSelect.innerHTML = ''; // Clear existing options
-    activityPicker.style.display = 'grid'; // Show the picker
 
     const authData = getAuthData(); // Check auth status
 
