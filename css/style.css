@@ -1,0 +1,267 @@
+:root {
+    --strava-orange: #FC4C02;
+    --pico-font-family: 'Inter', sans-serif; /* Optional: Use Inter font like o3.html */
+    --pico-color: #e2e8f0; /* Lighter text color */
+    --pico-card-background-color: #1f2937; /* Darker card */
+    --pico-card-border-color: #374151;
+}
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+body {
+    font-family: var(--pico-font-family);
+    background: linear-gradient(to bottom right, #111827, #1f2937, #111827);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+ /* Add margin on larger screens */
+ @media (min-width: 1200px) { /* Adjust breakpoint if needed */
+    main.container {
+        /* Override Pico's default max-width for larger screens */
+        max-width: 50vw; /* Content takes 50% width, leaving 25% margin each side */
+        /* Auto margins handle the centering */
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+header, footer {
+    text-align: center;
+}
+header h1 {
+    font-size: 3.5rem; /* Adjust size as needed */
+    font-weight: 800;
+    color: var(--strava-orange);
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+header p {
+    font-size: 1.25rem;
+    color: #9ca3af; /* Slightly muted color */
+    margin-bottom: 1.5rem;
+}
+.button-group {
+    display: flex;
+    flex-direction: column; /* Stack button and indicator */
+    align-items: center; /* Center items horizontally */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 0.5rem; /* Reduced gap for indicator */
+    justify-content: center; /* Center remaining button */
+    margin-bottom: 1.5rem;
+}
+.button-group label, .button-group a, .button-group button {
+    margin-bottom: 0; /* Override Pico's default margin */
+}
+/* Keep .connected styles for now, may need adjustment */
+#stravaBtn.connected {
+     opacity: 0.8;
+     cursor: default;
+}
+
+/* New Strava Status Indicator Styles */
+.strava-status {
+    display: none; /* Hidden by default */
+    font-size: 0.8rem;
+    color: #6b7280; /* Muted grey */
+    margin-top: -0.25rem; /* Adjust spacing slightly */
+    transition: color 0.3s ease;
+}
+.strava-status.connected {
+    display: inline; /* Show when connected */
+    color: #22c55e; /* Green color for connected */
+    font-weight: 500;
+}
+
+main {
+    flex: 1; /* Ensure main content pushes footer down */
+    padding-bottom: 2rem;
+}
+
+/* NEW: Upload Area Styles */
+#uploadArea {
+    border: 2px dashed #4b5563; /* Dashed border */
+    border-radius: 0.75rem; /* Rounded corners */
+    padding: 2.5rem 1.5rem; /* Padding */
+    text-align: center;
+    cursor: pointer;
+    background-color: rgba(31, 41, 55, 0.5); /* Slightly transparent dark background */
+    color: #9ca3af; /* Muted text color */
+    margin-bottom: 1.5rem;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem; /* Space between icon and text */
+}
+#uploadArea:hover {
+    background-color: rgba(55, 65, 81, 0.6); /* Slightly lighter on hover */
+    border-color:var(--strava-orange);
+}
+#uploadArea svg {
+    width: 3rem; /* Larger icon */
+    height: 3rem;
+    fill: #9ca3af; /* Icon color */
+    margin-bottom: 0.5rem; /* Space below icon */
+}
+#uploadArea span {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+#preview-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 90vw; /* Limit width */
+    margin: 1rem auto; /* Center */
+    border-radius: 1rem; /* Softer corners */
+    overflow: hidden;
+    background-color: #374151; /* Placeholder background */
+    display: flex; /* Center image */
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--pico-card-border-color);
+    min-height: 200px; /* Ensure it has some height initially */
+}
+#preview-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Fit image within container */
+}
+
+/* Overlay Card */
+#statsCard {
+    position: absolute;
+    bottom: 1rem;
+    left: 0.2rem;
+    right: auto;
+    /* Increase opacity for a stronger 'frost' effect simulation */
+    background: rgba(52, 54, 54, 0.7); /* Was 0.243 */
+    backdrop-filter: blur(4px); /* Keep for live preview */
+    color: #fff;
+    border-radius: 0.75rem; /* Slightly larger radius */
+    padding: 0.4rem 0.6rem; /* Slightly reduced padding */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none; /* Prevent scrolling on touch */
+    max-width: 50%; /* Added max-width constraint */
+    max-height: 30%; /* Relaxed max-height constraint */
+    min-width: 40%;
+    min-height: 15%;
+    overflow: hidden; /* Prevent content overflow */
+    visibility: hidden;
+    display: flex; /* Use flexbox for layout */
+    flex-direction: column; /* Stack items vertically */
+    gap: 0.15rem; /* Further reduced gap - maybe use cqi? */
+
+    /* NEW: Define as a container */
+    container-type: inline-size;
+    container-name: stats-card;
+}
+#statsCard:active {
+    cursor: grabbing;
+}
+/* Use container queries for scaling content */
+@container stats-card (min-width: 1px) { /* Apply scaling based on container width */
+    #statsCard h2 {
+        font-size: clamp(0.8rem, 8cqi, 2rem); /* Use clamp for min/max */
+        font-weight: 600;
+        margin-bottom: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        line-height: 1.1;
+        min-height: 1.6em; /* Use em relative to scaled font-size */
+        flex-shrink: 0;
+    }
+    .stats-row {
+        display: flex;
+        align-items: center;
+        gap: clamp(0.15rem, 4cqi, 1rem);
+        flex-grow: 1;
+        min-height: 0;
+    }
+    #activityIcon {
+        font-size: clamp(1.2rem, 12cqi, 2.5rem);
+        line-height: 1;
+        color: white;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto auto;
+        gap: clamp(0.1rem, 2cqi, 0.4rem) clamp(0.1rem, 1.5cqi, 0.6rem);
+        text-align: center;
+        flex-grow: 1;
+        min-height: 0;
+    }
+    .stats-grid div span:first-child { /* Number */
+        display: block;
+        font-size: clamp(0.6rem, 8cqi, 1.5rem);
+        font-weight: 700;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .stats-grid div span:last-child { /* Unit */
+        display: block;
+        font-size: clamp(0.45rem, 6cqi, 1.2rem);
+        text-transform: uppercase;
+        color: #cbd5e1;
+        opacity: 0.9;
+        line-height: 1;
+        white-space: nowrap;
+    }
+    #statsCard {
+        padding: clamp(0.3rem, 2.5cqi, 0.8rem) clamp(0.4rem, 3cqi, 1rem);
+        gap: clamp(0.1rem, 1cqi, 0.3rem); /* Scale gap between title and stats-row */
+    }
+}
+
+.no-select { /* Utility class */
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none; /* Added for IE/Edge */
+}
+/* Action Buttons Styling */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+#stravaPoweredLogo {
+    margin-top: 1rem;
+    height: 14px; /* Adjust height as needed */
+    width: auto; /* Maintain aspect ratio */
+    vertical-align: middle; /* Align with buttons if needed */
+}
+/* Hide default file input */
+input[type="file"].hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+ footer {
+    color: #6b7280; /* Muted footer text */
+    margin-top: auto; /* Push to bottom */
+    padding: 1rem 0;
+    font-size: 0.9rem;
+}
