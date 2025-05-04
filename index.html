@@ -147,8 +147,9 @@
             bottom: 1rem;
             left: 0.2rem;
             right: auto;
-            background: rgba(52, 54, 54, 0.243);
-            backdrop-filter: blur(4px);
+            /* Increase opacity for a stronger 'frost' effect simulation */
+            background: rgba(52, 54, 54, 0.7); /* Was 0.243 */
+            backdrop-filter: blur(4px); /* Keep for live preview */
             color: #fff;
             border-radius: 0.75rem; /* Slightly larger radius */
             padding: 0.4rem 0.6rem; /* Slightly reduced padding */
