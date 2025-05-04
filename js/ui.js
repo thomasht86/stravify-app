@@ -39,10 +39,10 @@ export function setLoadingState(isLoading, button) {
     if (!button) return; // Safety check
 
     if (isLoading) {
-        button.ariaBusy = "true";
+        button.setAttribute('aria-busy', 'true');
         button.disabled = true;
     } else {
-        button.ariaBusy = "false";
+        button.setAttribute('aria-busy', 'false');
         // Special handling for enabling/disabling based on state
         if (button === downloadBtn) {
             // Enable download only if an image is loaded (check img.src)
