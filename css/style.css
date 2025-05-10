@@ -225,7 +225,7 @@ main {
         gap: clamp(0.1rem, 1cqi, 0.3rem); /* Scale gap between title and stats-row */
     }
     .overlay-footer { /* Style for the new footer */
-        font-size: clamp(0.4rem, 4cqi, 0.7rem); /* Smaller, responsive font size */
+        font-size: clamp(0.3rem, 4cqi, 0.7rem); /* Smaller, responsive font size */
         font-weight: bold; /* Bolder text */
         letter-spacing: 0.1em; /* Slightly increased letter spacing */
         color: #e2e8f0; /* Light color, adjust as needed */
@@ -245,7 +245,7 @@ main {
     }
 
     #overlayStravaLogo {
-        height: clamp(0.5rem, 5cqi, 0.8rem); /* Responsive height */
+        height: clamp(0.3rem, 5cqi, 0.8rem); /* Responsive height */
         width: auto; /* Maintain aspect ratio */
         display: block; /* Ensure it behaves as a block for sizing */
     }
