@@ -32,6 +32,8 @@ export const domElements = {
     sufferScoreDiv: getElement('sufferScoreDiv'),
     ovSufferScore: getElement('sufferScore'),
     activityMapCanvas: getElement('activityMapCanvas'),
+    overlayFooter: getElement('overlayFooter'), // Add the new footer element
+    overlayStravaLogo: getElement('overlayStravaLogo'), // Add the Strava logo in footer
 };
 
 // --- Utility Functions ---
