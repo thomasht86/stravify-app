@@ -224,6 +224,31 @@ main {
         padding: clamp(0.3rem, 2.5cqi, 0.8rem) clamp(0.4rem, 3cqi, 1rem);
         gap: clamp(0.1rem, 1cqi, 0.3rem); /* Scale gap between title and stats-row */
     }
+    .overlay-footer { /* Style for the new footer */
+        font-size: clamp(0.4rem, 4cqi, 0.7rem); /* Smaller, responsive font size */
+        font-weight: bold; /* Bolder text */
+        letter-spacing: 0.1em; /* Slightly increased letter spacing */
+        color: #e2e8f0; /* Light color, adjust as needed */
+        opacity: 0.8;
+        margin-top: clamp(0.1rem, 1cqi, 0.2rem); /* Small space above footer */
+        flex-shrink: 0; /* Prevent shrinking */
+        display: flex; /* Use flexbox */
+        justify-content: space-between; /* Space out text and logo */
+        align-items: flex-end; /* Vertically align items to the bottom */
+        width: 100%; /* Ensure it takes full width of its parent for spacing */
+        padding: 0 clamp(0.1rem, 0.5cqi, 0.2rem); /* Add horizontal padding */
+        box-sizing: border-box; /* Include padding in width calculation */
+    }
+
+    .overlay-footer span { /* Target the text span specifically if needed */
+        line-height: 0.5; /* Adjust line-height for tighter text box */
+    }
+
+    #overlayStravaLogo {
+        height: clamp(0.5rem, 5cqi, 0.8rem); /* Responsive height */
+        width: auto; /* Maintain aspect ratio */
+        display: block; /* Ensure it behaves as a block for sizing */
+    }
 }
 
 /* NEW: Style for Map Toggle Container */
