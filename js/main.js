@@ -133,7 +133,7 @@ function handleStravaConnectCallback(activities) {
 function handleDownload() {
     capture().then(blob => {
         const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15);
-        const filename = `stravify_${timestamp}.png`; // Changed to .png
+        const filename = `stravify_${timestamp}.jpg`; // Changed to .jpg
         const link = document.createElement('a');
         link.download = filename;
         link.href = URL.createObjectURL(blob);
