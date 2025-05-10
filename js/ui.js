@@ -374,7 +374,7 @@ export function capture() {
                     } else {
                         reject(new Error("Failed to create blob from canvas"));
                     }
-                }, 'image/jpeg', 0.9); // Use JPEG format with quality 0.9
+                }, 'image/jpeg', 1); // Use JPEG format with quality 1
             });
         })
         .catch(error => {
