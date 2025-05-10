@@ -346,17 +346,21 @@ export function capture() {
     let finalScale = 1;
     const displayedWidth = domElements.img.clientWidth;
     if (originalImageWidth && displayedWidth > 0) {
-        finalScale = originalImageWidth / displayedWidth;
-        // Clamp scale to avoid excessive memory usage (e.g., max 4k width)
-        const maxDim = 4096;
-        if (originalImageWidth * finalScale > maxDim) {
-            finalScale = maxDim / originalImageWidth;
+        finalScale = originalImageWidth / displayedWidth; // Target original image resolution
+
+        // Clamp scale to ensure the *output width of the image part* doesn't exceed maxDim
+        const maxDim = 4096; // Maximum desired dimension for the image part in the capture
+        // The effective width of the image in the canvas will be displayedWidth * finalScale
+        // which we want to be originalImageWidth.
+        // If originalImageWidth itself is greater than maxDim, we cap it.
+        if (originalImageWidth > maxDim) {
+            finalScale = maxDim / displayedWidth; // Adjust scale so image part width becomes maxDim
         }
-        console.log(`Calculated finalScale for html2canvas: ${finalScale} (Original: ${originalImageWidth}, Displayed: ${displayedWidth})`);
+        console.log(`Calculated finalScale for html2canvas: ${finalScale} (Original: ${originalImageWidth}, Displayed: ${displayedWidth}, Target Output Image Width: ${displayedWidth * finalScale})`);
     } else {
         console.warn("Could not determine original image width or preview width for scaling. Using scale 1.");
     }
-    finalScale = Math.max(1, finalScale); // Ensure scale is at least 1
+    finalScale = Math.max(1, finalScale); // Ensure scale is at least 1, so we don't downscale if original is smaller than display
 
 
     return html2canvas(wrapper, {
@@ -376,7 +380,7 @@ export function capture() {
                     } else {
                         reject(new Error("Failed to create blob from canvas"));
                     }
-                }, 'image/jpeg', 1); // Use JPEG format with quality 1
+                }, 'image/png'); // Use PNG format for lossless quality
             });
         })
         .catch(error => {
